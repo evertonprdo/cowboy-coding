@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            max-width: 1280px;
+            margin: auto;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: auto;
+        }
+
+        /* Estilo das células da tabela */
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        /* Estilo do cabeçalho da tabela */
+        th {
+            background-color: #f2f2f2;
+        }
+
+        /* Estilo de hover nas células da tabela */
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+    <script>
+        let serverData;
+        let requisicaoEnd = false;
+        function serverRequest() {
+            fetch('listar.php')
+                .then((response) => response.text())
+                .then(text => {
+                    serverData = JSON.parse(text);
+                    requisicaoEnd = true;
+                })
+                .catch(error => (
+                    console.error('Erro ao buscar dados:', error),
+                    requisicaoEnd = true)
+                )
+        }
+        serverRequest();
+    </script>
+</head>
+<body>
+    <div>
+        <label for="tipo-entr">IN/OUT</label>
+        <input type="checkbox" id="tipo-entr">
+    </div>
+    <table id="myTable">
+        <thead>
+            <th data-coluna="tipo.nome">Tipo</th>
+            <th data-coluna="descr">Descrição</th>
+            <th data-coluna="valor">Valor</th>
+            <th data-coluna="date">Data</th>
+            <th data-coluna="categoria.nome">Categoria</th>
+        </thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+    </table>
+
+    <script>
+        function waitForRequestCompletion() {
+            return new Promise(resolve => {
+                const checkRequest = () => {
+                    if (requisicaoEnd) {
+                        resolve(); // Resolve a Promise quando a requisição for concluída
+                    } else {
+                        setTimeout(checkRequest, 100); // Verifica novamente a cada 100ms
+                    }
+                };
+                checkRequest(); // Inicia o loop de verificação
+            });
+        }
+        
+        waitForRequestCompletion()
+        .then(() => {
+            // Agora você pode acessar os dados do servidor após a conclusão da requisição
+            console.log('Requisição ao servidor concluido');
+
+            const myTable = document.querySelector('#myTable');
+            const myTableHead = myTable.getElementsByTagName('thead')[0];
+            const myTableBody = myTable.getElementsByTagName('tbody')[0];
+
+            const checkTipo = document.querySelector('#tipo-entr');
+
+            function renderTable(data) {
+                myTableBody.innerHTML = '';
+                data.forEach(row => {
+                    let item_row = document.createElement('tr');
+                    
+                    let float_num = parseFloat(row.valor);
+                    let brl_price = float_num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                    let date_format = new Date(row.date);
+                    date = date_format.toLocaleDateString();
+                    
+                    let data_row = [];
+                    
+                    if (checkTipo.checked) {
+                        if (row.tipo.id === 1) {
+                            data_row = [
+                            row.tipo.nome,
+                            row.descr,
+                            brl_price,
+                            date,
+                            row.categoria.nome
+                            ]
+                        }
+                    } else {
+                        if (row.tipo.id === 2) {
+                                data_row = [
+                                row.tipo.nome,
+                                row.descr,
+                                brl_price,
+                                date,
+                                row.categoria.nome
+                            ]
+                        }
+                    }
+
+                    data_row.forEach(element => {
+                        let cell = document.createElement('td');
+                        cell.textContent = element;
+                        item_row.appendChild(cell);
+                    });
+                    
+                    myTableBody.appendChild(item_row);
+                });
+            }
+            renderTable(serverData);
+
+            checkTipo.addEventListener('click', function() {
+                renderTable(serverData);
+            })
+
+            let ordAtual = null;
+            let ord = true;
+            
+            function ordenarColuna(coluna) {
+                if (ordAtual === coluna) {
+                    // Alterna o estado da ordenação
+                    ord = !ord;
+                } else {
+                    ordAtual = coluna;
+                    ord = true;
+                }
+
+                serverData.sort((a, b) => {
+                    let aValue, bValue;
+
+                    if(coluna.includes('.')){
+                        let [key, value] = coluna.split('.');
+
+                        aValue = value ? a[key][value] : a[key];
+                        bValue = value ? b[key][value] : b[key];
+                    } else {
+                        aValue = a[coluna];
+                        bValue = b[coluna];
+                    }
+
+                    let ragex = /^\d/;
+
+                    if(ragex.test(aValue[0]) && (aValue.includes('/') || aValue.includes(':') || aValue.includes('-')) && !isNaN(new Date(aValue).getDate())) {
+                        return ord ? (aValue < bValue ? -1 : aValue > bValue ? 1 : 0) : (aValue < bValue ? 1 : aValue > bValue ? -1 : 0);
+                    } else if (!isNaN(parseFloat(aValue))) {
+                        return ord ? (aValue - bValue) : (bValue - aValue);
+                    } else {
+                        return ord ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                    }
+                })
+                renderTable(serverData);
+            }
+
+            const ths = document.querySelectorAll('table#myTable th');
+            ths.forEach(th => {
+                th.addEventListener('click', function() {
+                    const coluna = this.dataset.coluna;
+                    ordenarColuna(coluna);
+                });
+            });
+        })
+    </script>
+</body>
+</html>
