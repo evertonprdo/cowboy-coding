@@ -7,7 +7,7 @@ use sistema\TipoTransacao;
 
 function cadastrarTransacaoArquivoCSV() : string{
     try {
-        $file = fopen('../csv/transacao.csv', 'r');
+        $file = fopen('../local-db/csv/transacao.csv', 'r');
         $i = 0;
         
         fgetcsv($file); //Cabeçalho da tabela
