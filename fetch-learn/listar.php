@@ -47,6 +47,11 @@ function getTransacoesJson() {
         ];
     }
     $parse_json = json_encode($transacoes, JSON_UNESCAPED_UNICODE);
+    if (file_put_contents('../local-db/json/transacoes.json', $parse_json)){
+        echo 'sucess';
+    } else {
+        echo 'error';
+    }
     return $parse_json;
 
 }
