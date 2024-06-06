@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOM Manipulation Performance Test</title>
+    <style>
+        .test-div {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>DOM Manipulation Performance Test</h1>
+
+    <!-- Seção 1: Manipulação direta -->
+    <div>
+        <h2>Manipulação Direta</h2>
+        <button onclick="directManipulation()">Run Test</button>
+        <div id="directDiv" class="test-div"></div>
+    </div>
+
+    <!-- Seção 2: Capturar elemento e manipular -->
+    <div>
+        <h2>Capturar Elemento e Manipular</h2>
+        <button onclick="captureAndManipulate()">Run Test</button>
+        <div id="captureDiv" class="test-div"></div>
+    </div>
+
+    <!-- Seção 3: Usando DocumentFragment -->
+    <div>
+        <h2>Usando DocumentFragment</h2>
+        <button onclick="fragmentManipulation()">Run Test</button>
+        <div id="fragmentDiv" class="test-div"></div>
+    </div>
+
+    <script>
+        var n_loops = 5000
+
+        function atribuicao(i) {
+            const newDiv = document.createElement('div');
+            newDiv.textContent = `Item ${i}`;
+            return newDiv;
+        }
+
+        function atribuicao2(i, container) {
+            const newDiv = document.createElement('div');
+                newDiv.textContent = `Item ${i}`;
+                return newDiv
+        }
+
+        function atribuicao3(i, fragment) {
+            const newDiv = document.createElement('div');
+                newDiv.textContent = `Item ${i}`;
+                return newDiv;
+        }
+
+        async function competir() {
+            await wait1ms();
+        }
+
+        function wait1ms() {
+            return new Promise(resolve => setTimeout(resolve, 1));
+        }
+        async function directManipulation() {
+            const start = performance.now();
+            const container = document.getElementById('directDiv');
+            container.innerHTML = ''; // Limpa a div
+            for (let i = 0; i < n_loops; i++) {
+                await competir();
+                let t = await atribuicao(i);
+                document.getElementById('directDiv').appendChild(t);
+            }
+            const end = performance.now();
+            console.log(`Direct Manipulation: ${end - start} ms`);
+        }
+
+        async function captureAndManipulate() {
+            const start = performance.now();
+            const container = document.getElementById('captureDiv');
+            container.innerHTML = ''; // Limpa a div
+            const elements = [];
+            for (let i = 0; i < n_loops; i++) {
+                await competir();
+                let t = await atribuicao2(i);
+                container.appendChild(t);
+            }
+            const end = performance.now();
+            console.log(`Capture and Manipulate: ${end - start} ms`);
+        }
+
+        async function fragmentManipulation() {
+            const start = performance.now();
+            const container = document.getElementById('fragmentDiv');
+            container.innerHTML = ''; // Limpa a div
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < n_loops; i++) {
+                await competir();
+                let t = await atribuicao3(i, fragment);
+                fragment.appendChild(t);
+            }
+            container.appendChild(fragment);
+            const end = performance.now();
+            console.log(`Fragment Manipulation: ${end - start} ms`);
+        }
+
+        /*  Em uso da CPU é indiscutivel a diferença de usar fragments para manipular o DOM uma unica vez por alteração, principalmente em muitas alterações
+            
+            Fragment Manipulation.: Uso da CPU praticamente nulo
+            Direct Manipulation...: O uso da CPU crescente e elevado ao longo da execução
+            Capture and Manipulate: O uso da CPU crescente e elevado ao longo da execução
+
+            Quanto ao tempo de execução, não parece mudar muito de uma para a outra dependendo de como os elementos são alterados.
+
+            Fragment Manipulation.: 23603,09999999404 ms  Executado um a um, com todas as divs limpas a cada execução
+            Capture and Manipulate: 25885,80000001192 ms  8% a mais que Fragment
+            Direct Manipulation...: 25561,90000000596 ms  7% a mais que Fragment
+
+            Fragment Manipulation.: 22884,29999998212 ms  Executado um a um, com todas as divs limpas a cada execução
+            Capture and Manipulate: 25536,30000001192 ms  10% a mais que Fragment
+            Direct Manipulation...: 26536ms               13% a mais que Fragment
+
+            Fragment Manipulation.: 24007,59999999404 ms  Executando 1° Direct, 2° Capture, 3° Fragment
+            Capture and Manipulate: 32331,80000001192 ms  25% a mais que Fragment
+            Direct Manipulation...: 26584,69999998808 ms   9% a mais que Fragment
+
+            Fragment Manipulation.: 22794,5 ms            Executando 1° Fragment, 2° Capture, 3° Direct
+            Capture and Manipulate: 29192,19999998808 ms  21% a mais que Fragment
+            Direct Manipulation...: 39011,40000000596 ms  41% a mais que Fragment
+
+            O tempo de execução se torna consideravelmente maior com mais elementos na página, porem vale resaltar que o desempenho do Fragment quando executado por ultimo é proximo de quando executado por primeiro.
+        */
+    </script>
+</body>
+</html>
